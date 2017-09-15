@@ -7,36 +7,38 @@ import processing.core.PApplet;
  */
 public class Controller extends PApplet {
     // Size of cells
-    int cellSize = 5;
+    private int cellSize = 5;
 
     // How likely for a cell to be alive at start (in percentage)
-    float probabilityOfAliveAtStart = 15;
+    private float probabilityOfAliveAtStart = 10;
 
     // Variables for timer
-    int interval = 100;
-    int lastRecordedTime = 0;
+    private static final int INTERVAL = 75;
+    private int lastRecordedTime = 0;
 
     // Colors for active/inactive cells
-    int alive = color(0, 200, 0);
-    int dead = color(0);
+    private final int COLOR_LIVING = color(0, 200, 0);
+    private final int COLOR_DEAD = color(0);
+    private final int COLOR_LIVING_NEW = color(0, 0, 200);
+    private final int COLOR_DEAD_NEW = color(200, 0, 0);
 
     // Array of cells
-    Cell[][] cells;
+    private Cell[][] cells;
     // Buffer to record the state of the cells and use this while changing the others in the iterations
-    Cell[][] cellsBuffer;
+    private Cell[][] cellsBuffer;
 
-    int maxCols = 0;
-    int maxRows = 0;
+    private int maxCols = 0;
+    private int maxRows = 0;
 
     // Pause
-    boolean pause = false;
+    private boolean pause = false;
 
     public static void main(String args[]) {
         PApplet.main("org.processing.gameoflife.Controller");
     }
 
     public void settings() {
-        size (100, 100);
+        size (1024, 768);
         noSmooth();
     }
 
@@ -48,135 +50,170 @@ public class Controller extends PApplet {
         cells = new Cell[maxCols][maxRows];
         cellsBuffer = new Cell[maxCols][maxRows];
 
-        // Initialization of cells
-        for (int x=0; x<maxCols; x++) {
-            for (int y=0; y<maxRows; y++) {
-                float state = random (100);
-                state = state > probabilityOfAliveAtStart ? 0 : 1;
-                cells[x][y] = new Cell(state); // Save state of each cell
-            }
-        }
+        restart();
 
-        background(0); // Fill in black in case cells don't cover all the windows
-        // This stroke will draw the background grid
+        background(0);
         stroke(48);
     }
 
-    public void draw() {
+    /***********
+     * DRAWING *
+     ***********/
 
+    public void draw() {
+        drawGrid();
+
+        // Iterate if timer ticks
+        if ((millis() - lastRecordedTime) > INTERVAL && !pause) {
+            iteration();
+            lastRecordedTime = millis();
+        }
+
+        processMouseEvent();
+    }
+
+    private void drawGrid() {
         //Draw grid
         for (int x=0; x<maxCols; x++) {
             for (int y=0; y<maxRows; y++) {
-                if (cells[x][y].getState()==1) {
-                    fill(alive); // If alive
-                }
-                else {
-                    fill(dead); // If dead
-                }
+                fill(getCellColor(cells[x][y]));
                 rect (x*cellSize, y*cellSize, cellSize, cellSize);
             }
         }
-        // Iterate if timer ticks
-        if (millis()-lastRecordedTime>interval) {
-            if (!pause) {
-                iteration();
-                lastRecordedTime = millis();
+    }
+
+    private int getCellColor(Cell cell) {
+        int color = 0;
+        if (!cell.isAlive() && !cell.wasAlive()) {
+            color = COLOR_DEAD;
+        }
+        else if (!cell.isAlive() && cell.wasAlive()) {
+            color = COLOR_DEAD_NEW;
+        }
+        else if (cell.isAlive() && !cell.wasAlive()) {
+            color = COLOR_LIVING_NEW;
+        }
+        else if (cell.isAlive() && cell.wasAlive()) {
+            color = COLOR_LIVING;
+        }
+        return color;
+    }
+
+    /*************
+     * ITERATION *
+     *************/
+
+    public void iteration() {
+        updateCellBuffer();
+
+        for (int x=0; x<maxCols; x++) {
+            for (int y=0; y<maxRows; y++) {
+                processCellState(x, y, getLiveNeighbourCount(x, y));
             }
         }
+    }
 
-        // Create  new cells manually on pause
+    private void processCellState(int x, int y, int numLiveNeighbors) {
+        if (cellsBuffer[x][y].isAlive()) {
+            boolean state = !(numLiveNeighbors < 2 || numLiveNeighbors > 3);
+            cells[x][y].setAlive(state);
+        }
+        else {
+            cells[x][y].setAlive(numLiveNeighbors == 3);
+        } // End of if
+    }
+
+    private void updateCellBuffer() {
+        for (int x=0; x<maxCols; x++) {
+            for (int y=0; y<maxRows; y++) {
+                cellsBuffer[x][y] = cells[x][y].dup();
+            }
+        }
+    }
+
+    private int getLiveNeighbourCount(int x, int y) {
+        int neighbours = 0;
+        int xMax = x+1;
+        int yMax = y+1;
+        for (int nx=x-1; nx<=xMax; nx++) {
+            for (int ny=y-1; ny<=yMax; ny++) {
+                if (((nx>=0) && (nx<maxCols)) && ((ny>=0) && (ny<maxRows))) {
+                    if (!((nx==x) && (ny==y)) && cellsBuffer[nx][ny].isAlive()) neighbours++;
+                }
+            }
+        }
+        return neighbours;
+    }
+
+
+
+    /********************
+     * USER INTERACTION *
+     ********************/
+
+    private void processMouseEvent() {
         if (pause && mousePressed) {
-            // Map and avoid out of bound errors
-            int xCellOver = (int) map(mouseX, 0, width, 0, maxCols);
-            xCellOver = constrain(xCellOver, 0, maxCols-1);
-            int yCellOver = (int) map(mouseY, 0, height, 0, maxRows);
-            yCellOver = constrain(yCellOver, 0, maxRows-1);
+            int mx = mapMouseToX();
+            int my = mapMouseToY();
 
-            // Check against cells in buffer
-            if (cellsBuffer[xCellOver][yCellOver].getState()==1) { // Cell is alive
-                cells[xCellOver][yCellOver].setState(0); // Kill
-                fill(dead); // Fill with kill color
+            if (cellsBuffer[mx][my].isAlive()) {
+                cells[mx][my].setAlive(false);
+                fill(COLOR_DEAD);
+            } else {
+                cells[mx][my].setAlive(true);
+                fill(COLOR_LIVING);
             }
-            else { // Cell is dead
-                cells[xCellOver][yCellOver].setState(1); // Make alive
-                fill(alive); // Fill alive color
-            }
-        }
-        else if (pause && !mousePressed) { // And then save to buffer once mouse goes up
-            // Save cells to buffer (so we opeate with one array keeping the other intact)
-            for (int x=0; x<maxCols; x++) {
-                for (int y=0; y<maxRows; y++) {
+        } else if (pause) {
+            for (int x = 0; x < maxCols; x++) {
+                for (int y = 0; y < maxRows; y++) {
                     cellsBuffer[x][y] = cells[x][y].dup();
                 }
             }
         }
     }
 
+    private int mapMouseToX() {
+        int xCellOver = (int) map(mouseX, 0, width, 0, maxCols);
+        return constrain(xCellOver, 0, maxCols - 1);
+    }
 
-
-    public void iteration() { // When the clock ticks
-        // Save cells to buffer (so we opeate with one array keeping the other intact)
-        for (int x=0; x<maxCols; x++) {
-            for (int y=0; y<maxRows; y++) {
-                cellsBuffer[x][y] = cells[x][y].dup();
-            }
-        }
-
-        // Visit each cell:
-        for (int x=0; x<maxCols; x++) {
-            for (int y=0; y<maxRows; y++) {
-                // And visit all the neighbours of each cell
-                int neighbours = 0; // We'll count the neighbours
-                for (int xx=x-1; xx<=x+1;xx++) {
-                    for (int yy=y-1; yy<=y+1;yy++) {
-                        if (((xx>=0)&&(xx<maxCols))&&((yy>=0)&&(yy<maxRows))) { // Make sure you are not out of bounds
-                            if (!((xx==x)&&(yy==y))) { // Make sure to to check against self
-                                if (cellsBuffer[xx][yy].getState()==1){
-                                    neighbours++; // Check alive neighbours and count them
-                                }
-                            } // End of if
-                        } // End of if
-                    } // End of yy loop
-                } //End of xx loop
-                // We've checked the neigbours: apply rules!
-                if (cellsBuffer[x][y].getState()==1) { // The cell is alive: kill it if necessary
-                    if (neighbours < 2 || neighbours > 3) {
-                        cells[x][y].setState(0); // Die unless it has 2 or 3 neighbours
-                    }
-                }
-                else { // The cell is dead: make it live if necessary
-                    if (neighbours == 3 ) {
-                        cells[x][y].setState(1); // Only if it has 3 neighbours
-                    }
-                } // End of if
-            } // End of y loop
-        } // End of x loop
-    } // End of function
+    private int mapMouseToY() {
+        int yCellOver = (int) map(mouseY, 0, height, 0, maxRows);
+        return constrain(yCellOver, 0, maxRows - 1);
+    }
 
     public void keyPressed() {
-        if (key=='r' || key == 'R') {
-            // Restart: reinitialization of cells
-            for (int x=0; x<maxCols; x++) {
-                for (int y=0; y<maxRows; y++) {
-                    float state = random (100);
-                    if (state > probabilityOfAliveAtStart) {
-                        state = 0;
-                    }
-                    else {
-                        state = 1;
-                    }
-                    cells[x][y].setState(state); // Save state of each cell
-                }
+        switch(key) {
+            case 'r':case 'R':
+                restart();
+                break;
+            case ' ':
+                togglePause();
+                break;
+            case 'c':case 'C':
+                clearAll();
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void clearAll() {
+        for (int x=0; x<maxCols; x++) {
+            for (int y=0; y<maxRows; y++) {
+                cells[x][y].setAlive(false); // Save all to zero
             }
         }
-        if (key==' ') { // On/off of pause
-            pause = !pause;
-        }
-        if (key=='c' || key == 'C') { // Clear all
-            for (int x=0; x<maxCols; x++) {
-                for (int y=0; y<maxRows; y++) {
-                    cells[x][y].setState(0); // Save all to zero
-                }
+    }
+
+    public void togglePause() { pause = !pause; }
+
+    public void restart() {
+        for (int x=0; x<maxCols; x++) {
+            for (int y=0; y<maxRows; y++) {
+                boolean state = random (100) <= probabilityOfAliveAtStart;
+                cells[x][y] = new Cell(state, state);
+                cellsBuffer[x][y] = new Cell(state, state);
             }
         }
     }
