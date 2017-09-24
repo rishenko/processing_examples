@@ -82,7 +82,7 @@ public class Controller extends PApplet {
         }
     }
 
-    private int getCellColor(Cell cell) {
+    public int getCellColor(Cell cell) {
         int color = 0;
         if (!cell.isAlive() && !cell.wasAlive()) {
             color = COLOR_DEAD;
