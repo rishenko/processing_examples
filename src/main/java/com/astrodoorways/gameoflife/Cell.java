@@ -1,15 +1,11 @@
-package org.processing.gameoflife;
+package com.astrodoorways.gameoflife;
 
 /**
- * Created by kevinmcabee on 9/14/17.
+ * An individual cell used for implementations of Conway's Game of Life.
  */
 public class Cell implements Cloneable {
     boolean prevState = false;
     boolean state = false;
-
-    public Cell(boolean state) {
-        this.state = state;
-    }
 
     public Cell(boolean state, boolean prevState) {
         this.state = state;

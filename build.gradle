@@ -1,9 +1,10 @@
-group 'com.waywardcoder'
-version '1.0-SNAPSHOT'
+group 'com.astrodoorways'
+version '0.01-SNAPSHOT'
 
 apply plugin: 'java'
 
 sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories {
     mavenCentral()

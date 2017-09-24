@@ -1,9 +1,9 @@
-package org.processing.gameoflife;
+package com.astrodoorways.gameoflife;
 
 import processing.core.PApplet;
 
 /**
- * Created by kevinmcabee on 9/14/17.
+ * A Processing implementation of Game of Life By Joan Soler-Adillon.
  */
 public class ControllerOrig extends PApplet {
     // Size of cells

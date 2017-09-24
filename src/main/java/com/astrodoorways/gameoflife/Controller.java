@@ -1,9 +1,28 @@
-package org.processing.gameoflife;
+package com.astrodoorways.gameoflife;
 
 import processing.core.PApplet;
 
 /**
- * Created by kevinmcabee on 9/14/17.
+ * Variation of the Game of Life example found at processing.org. Original implementation was
+ * written by Joan Soler-Adillon.
+ *
+ * Keyboard Input:
+ * <p>
+ *     <ul>r/R: reset the game to a randomized board</ul>
+ *     <ul>c/C: clear the board</ul>
+ *     <ul>spacebar: pause the game</ul>
+ * </p>
+ *
+ * Mouse Input:
+ * Left Mouse Button: toggle dead/alive state of a cell while game is paused
+ *
+ * Cell States:
+ * <p>
+ *     <ul>black: cell state - last round: DEAD, this round: DEAD</ul>
+ *     <ul>green: cell state - last round: ALIVE, this round: ALIVE</ul>
+ *     <ul>blue: cell state - last round: DEAD, this round: ALIVE</ul>
+ *     <ul>red: cell state - last round: ALIVE, this round: DEAD</ul>
+ * </p>
  */
 public class Controller extends PApplet {
     // Size of cells
@@ -34,7 +53,7 @@ public class Controller extends PApplet {
     private boolean pause = false;
 
     public static void main(String args[]) {
-        PApplet.main("org.processing.gameoflife.Controller");
+        PApplet.main("com.astrodoorways.gameoflife.Controller");
     }
 
     public void settings() {
